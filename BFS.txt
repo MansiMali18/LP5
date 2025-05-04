@@ -1,0 +1,131 @@
+#BFS
+
+#include <iostream>
+#include <queue>
+#include <omp.h>
+
+using namespace std;
+
+class node {
+public:
+    node *left, *right;
+    int data;
+};
+
+class Breadthfs {
+public:
+    node* insert(node*, int);
+    void bfs(node*);
+};
+
+// Inserts a node into the binary tree (level order)
+node* Breadthfs::insert(node* root, int data) {
+    if (!root) {
+        root = new node{nullptr, nullptr, data};
+        return root;
+    }
+
+    queue<node*> q;
+    q.push(root);
+
+    while (!q.empty()) {
+        node* temp = q.front();
+        q.pop();
+
+        if (!temp->left) {
+            temp->left = new node{nullptr, nullptr, data};
+            return root;
+        } else {
+            q.push(temp->left);
+        }
+
+        if (!temp->right) {
+            temp->right = new node{nullptr, nullptr, data};
+            return root;
+        } else {
+            q.push(temp->right);
+        }
+    }
+
+    return root;  // Fixes warning: control reaches end of non-void function
+}
+
+// Performs parallel BFS traversal using OpenMP
+void Breadthfs::bfs(node* head) {
+    if (!head) return;
+
+    queue<node*> q;
+    q.push(head);
+
+    cout << "\nBFS Traversal (Parallel):" << endl;
+
+    while (!q.empty()) {
+        int qSize = q.size();
+        vector<node*> currentLevel;
+
+        // Collect current level nodes
+        for (int i = 0; i < qSize; ++i) {
+            node* curr = q.front();
+            q.pop();
+            currentLevel.push_back(curr);
+        }
+
+        // Process current level in parallel
+        #pragma omp parallel for
+        for (int i = 0; i < currentLevel.size(); ++i) {
+            node* currNode = currentLevel[i];
+
+            // Print node value
+            #pragma omp critical
+            {
+                cout << "\t" << currNode->data;
+            }
+
+            // Push children into queue (serially to avoid race conditions)
+            #pragma omp critical
+            {
+                if (currNode->left) q.push(currNode->left);
+                if (currNode->right) q.push(currNode->right);
+            }
+        }
+    }
+
+    cout << endl;
+}
+
+// Main function
+int main() {
+    node* root = nullptr;
+    Breadthfs tree;
+    int data;
+    char ans;
+
+    do {
+        cout << "\nEnter data => ";
+        cin >> data;
+        root = tree.insert(root, data);
+        cout << "Do you want to insert one more node? (y/n): ";
+        cin >> ans;
+    } while (ans == 'y' || ans == 'Y');
+
+    tree.bfs(root);
+
+    return 0;
+}
+
+
+
+Enter data => 1
+Do you want to insert one more node? (y/n): y
+
+Enter data => 2
+Do you want to insert one more node? (y/n): y
+
+Enter data => 3
+Do you want to insert one more node? (y/n): y
+
+Enter data => 4
+Do you want to insert one more node? (y/n): y
+
+Enter data => 5
+Do you want to insert one more node? (y/n): n
